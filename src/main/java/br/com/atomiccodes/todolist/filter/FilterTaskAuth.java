@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
+import at.favre.lib.crypto.bcrypt.BCrypt.Result;
 import br.com.atomiccodes.todolist.users.IUserRepository;
 import br.com.atomiccodes.todolist.users.UserModel;
 import jakarta.servlet.Filter;
@@ -29,6 +30,14 @@ public class FilterTaskAuth extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         // TODO Auto-generated method stub
+
+        String serveletPath = request.getServletPath();
+        if (!serveletPath.startsWith(("/tasks/"))) {
+            System.out.println(serveletPath);
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String authorization = request.getHeader("Authorization");
         String passwordEncoded = authorization.substring("Basic".length()).trim();
 
@@ -42,11 +51,16 @@ public class FilterTaskAuth extends OncePerRequestFilter {
         UserModel user = this.userRepository.findByUsername(username);
 
         if (user == null) {
-            response.sendError(HttpStatus.UNAUTHORIZED);
+            response.sendError(401);
         }
 
-        BCrypt.verifyer().verify(userPassword.toCharArray(), user.getPassword());
+        Result verify = BCrypt.verifyer().verify(userPassword.toCharArray(), user.getPassword());
 
+        if (!verify.verified) {
+            response.sendError(401);
+        }
+
+        request.setAttribute("userId", user.getId());
         filterChain.doFilter(request, response);
     }
 }
