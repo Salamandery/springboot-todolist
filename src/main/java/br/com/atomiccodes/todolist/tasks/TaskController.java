@@ -54,9 +54,13 @@ public class TaskController {
 
     @PutMapping("/{id}")
     public ResponseEntity<TaskModel> update(@PathVariable UUID id, @RequestBody TaskModel taskModel, HttpServletRequest request) {
-        Optional<TaskModel> taskExists = this.taskRepository.findById(id);
+        TaskModel taskExists = this.taskRepository.findById(id).orElse(null);
         if (taskExists == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(taskModel);
+        }
+
+        if (!taskExists.getUserId().equals((UUID)request.getAttribute("userId"))) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(taskModel);
         }
 
         Util.copyNonNullProperties(taskModel, taskExists);
